@@ -7,7 +7,7 @@ public class DBManager {
         // URL de connexion au format JDBC
         String url = "jdbc:mysql://localhost:3306/bricomerlin"; // Remplace par le nom de ta base
         String user = "root"; // Remplace par ton utilisateur MySQL
-        String password = ""; // Remplace par ton mot de passe MySQL 
+        String password = ""; // Remplace par ton mot de passe MySQL
 
         try {
             // Charger le driver (inutile en Java 8+ mais peut être nécessaire dans certaines configs)
