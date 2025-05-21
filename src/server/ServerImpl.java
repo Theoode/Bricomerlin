@@ -106,5 +106,92 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         }
     }
 
+    @Override
+    public boolean creerCommande(String nomAcheteur, Map<String, Integer> articles) throws RemoteException {
+        String insertCommandeSQL = "INSERT INTO commandes(nom_acheteur, total_prix) VALUES (?, ?)";
+        String insertArticleCommandeSQL = "INSERT INTO article_commande(idReference, id_commande, quantite, prix_achat) VALUES (?, ?, ?, ?)";
+        String updateStockSQL = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
+        String selectArticleSQL = "SELECT prixUnitaire, enStock FROM article WHERE idReference = ?";
+
+        try (Connection conn = DBManager.getConnection()) {
+            conn.setAutoCommit(false); // Démarre une transaction
+
+            double totalPrix = 0.0;
+            Map<String, Double> prixArticles = new HashMap<>();
+
+            // Vérifier stock et récupérer prix
+            for (Map.Entry<String, Integer> entry : articles.entrySet()) {
+                String ref = entry.getKey();
+                int quantite = entry.getValue();
+
+                try (PreparedStatement ps = conn.prepareStatement(selectArticleSQL)) {
+                    ps.setString(1, ref);
+                    ResultSet rs = ps.executeQuery();
+
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return false; // Article introuvable
+                    }
+
+                    double prix = rs.getDouble("prixUnitaire");
+                    int enStock = rs.getInt("enStock");
+
+                    if (enStock < quantite) {
+                        conn.rollback();
+                        return false; // Stock insuffisant
+                    }
+
+                    prixArticles.put(ref, prix);
+                    totalPrix += prix * quantite;
+                }
+            }
+
+            // 1. Créer commande
+            int idCommande;
+            try (PreparedStatement ps = conn.prepareStatement(insertCommandeSQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, nomAcheteur);
+                ps.setDouble(2, totalPrix);
+                ps.executeUpdate();
+
+                ResultSet rs = ps.getGeneratedKeys();
+                if (rs.next()) {
+                    idCommande = rs.getInt(1);
+                } else {
+                    conn.rollback();
+                    return false; // Impossible de récupérer l'ID
+                }
+            }
+
+            // 2. Insérer articles de la commande et mettre à jour stock
+            for (Map.Entry<String, Integer> entry : articles.entrySet()) {
+                String ref = entry.getKey();
+                int quantite = entry.getValue();
+                double prix = prixArticles.get(ref);
+
+                try (PreparedStatement ps = conn.prepareStatement(insertArticleCommandeSQL)) {
+                    ps.setString(1, ref);
+                    ps.setInt(2, idCommande);
+                    ps.setInt(3, quantite);
+                    ps.setDouble(4, prix);
+                    ps.executeUpdate();
+                }
+
+                try (PreparedStatement ps = conn.prepareStatement(updateStockSQL)) {
+                    ps.setInt(1, quantite);
+                    ps.setString(2, ref);
+                    ps.executeUpdate();
+                }
+            }
+
+            conn.commit(); // Tout s’est bien passé
+            return true;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
 
 }
