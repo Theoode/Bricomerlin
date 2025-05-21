@@ -92,10 +92,10 @@ public class ClientApp {
             Map<String, Integer> articlesCommande = new HashMap<>();
             final double[] totalCommande = {0.0};
 
-            // Charger les articles disponibles
+            // Charger la ComboBox avec les articles disponibles
             List<String> articlesDispo = service.getArticlesDisponibles();
             for (String article : articlesDispo) {
-                articleComboBox.addItem(article);
+                articleComboBox.addItem(article); // "REF123 - Marteau"
             }
 
             JButton btnAjouterArticle = new JButton("Ajouter article");
@@ -116,13 +116,12 @@ public class ClientApp {
                     String selection = (String) articleComboBox.getSelectedItem();
                     if (selection == null || selection.isEmpty()) return;
 
-                    String ref = selection.split(" - ")[0];
+                    String ref = selection.split(" - ")[0]; // extrait "REF123"
                     int qte = Integer.parseInt(qteCommandeField.getText());
 
                     String res = service.consulterStock(ref);
-                    // Format attendu : "Article ref | Nom: nom | Famille: x | Prix: 15.99€ | Stock: y"
                     String prixStr = res.split("Prix: ")[1].split("€")[0].trim();
-                    double prix = Double.parseDouble(prixStr);
+                    double prix = Double.parseDouble(prixStr.replace(",", "."));
 
                     articlesCommande.put(ref, articlesCommande.getOrDefault(ref, 0) + qte);
                     totalCommande[0] += prix * qte;
@@ -158,7 +157,7 @@ public class ClientApp {
                 }
             });
 
-            // Ajouter les onglets
+            // Onglets
             JTabbedPane tabbedPane = new JTabbedPane();
             tabbedPane.addTab("Articles", articlePanel);
             tabbedPane.addTab("Créer commande", commandePanel);
