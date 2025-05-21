@@ -5,6 +5,7 @@ import rmi.Services;
 import javax.swing.*;
 import java.awt.*;
 import java.rmi.Naming;
+import java.util.List;
 
 public class ClientApp {
     public static void main(String[] args) {
@@ -14,16 +15,19 @@ public class ClientApp {
     private static void createUI() {
         JFrame frame = new JFrame("BricoMerlin - Client");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(500, 300);
+        frame.setSize(600, 400);
         frame.setLayout(new BorderLayout());
 
-        JPanel topPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        // Composants du haut
+        JPanel topPanel = new JPanel(new GridLayout(5, 2, 10, 10));
         JTextField refField = new JTextField();
         JTextField qteField = new JTextField();
+        JTextField familleField = new JTextField();
         JButton btnConsulter = new JButton("Consulter l'article");
         JButton btnAcheter = new JButton("Acheter l'article");
+        JButton btnRechercherFamille = new JButton("Rechercher par famille");
 
-        JTextArea resultArea = new JTextArea(10, 40);
+        JTextArea resultArea = new JTextArea(12, 50);
         resultArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(resultArea);
 
@@ -31,8 +35,11 @@ public class ClientApp {
         topPanel.add(refField);
         topPanel.add(new JLabel("Quantité (pour achat) :"));
         topPanel.add(qteField);
+        topPanel.add(new JLabel("Nom de la famille :"));
+        topPanel.add(familleField);
         topPanel.add(btnConsulter);
         topPanel.add(btnAcheter);
+        topPanel.add(btnRechercherFamille);
 
         frame.add(topPanel, BorderLayout.NORTH);
         frame.add(scrollPane, BorderLayout.CENTER);
@@ -61,6 +68,24 @@ public class ClientApp {
                     resultArea.append("❌ Erreur lors de l'achat : " + ex.getMessage() + "\n");
                 }
             });*/
+
+            btnRechercherFamille.addActionListener(e -> {
+                try {
+                    String nomFamille = familleField.getText();
+                    List<String> articles = service.rechercherArticlesParFamille(nomFamille);
+
+                    if (articles.isEmpty()) {
+                        resultArea.append("\n🔎 Aucun article trouvé dans la famille \"" + nomFamille + "\"\n");
+                    } else {
+                        resultArea.append("\n🔎 Articles de la famille \"" + nomFamille + "\" :\n");
+                        for (String article : articles) {
+                            resultArea.append("- " + article + "\n");
+                        }
+                    }
+                } catch (Exception ex) {
+                    resultArea.append("❌ Erreur lors de la recherche par famille : " + ex.getMessage() + "\n");
+                }
+            });
 
         } catch (Exception e) {
             resultArea.append("❌ Erreur de connexion au serveur : " + e.getMessage() + "\n");
