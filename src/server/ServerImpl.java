@@ -109,7 +109,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
     @Override
     public boolean creerCommande(String nomAcheteur, Map<String, Integer> articles) throws RemoteException {
         String insertCommandeSQL = "INSERT INTO commandes(nom_acheteur, total_prix) VALUES (?, ?)";
-        String insertArticleCommandeSQL = "INSERT INTO article_commande(idReference, id_commande, quantite, prix_achat) VALUES (?, ?, ?, ?)";
+        String insertCommandeProduitSQL = "INSERT INTO commande_produit(idReference, id_commande, quantite) VALUES (?, ?, ?)";
         String updateStockSQL = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
         String selectArticleSQL = "SELECT prixUnitaire, enStock FROM article WHERE idReference = ?";
 
@@ -146,7 +146,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                 }
             }
 
-            // 1. Créer commande
+            // 1. Créer la commande
             int idCommande;
             try (PreparedStatement ps = conn.prepareStatement(insertCommandeSQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, nomAcheteur);
@@ -158,24 +158,24 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                     idCommande = rs.getInt(1);
                 } else {
                     conn.rollback();
-                    return false; // Impossible de récupérer l'ID
+                    return false;
                 }
             }
 
-            // 2. Insérer articles de la commande et mettre à jour stock
+            // 2. Ajouter les articles à commande_produit + mise à jour du stock
             for (Map.Entry<String, Integer> entry : articles.entrySet()) {
                 String ref = entry.getKey();
                 int quantite = entry.getValue();
-                double prix = prixArticles.get(ref);
 
-                try (PreparedStatement ps = conn.prepareStatement(insertArticleCommandeSQL)) {
+                // Insertion dans commande_produit
+                try (PreparedStatement ps = conn.prepareStatement(insertCommandeProduitSQL)) {
                     ps.setString(1, ref);
                     ps.setInt(2, idCommande);
                     ps.setInt(3, quantite);
-                    ps.setDouble(4, prix);
                     ps.executeUpdate();
                 }
 
+                // Mise à jour du stock
                 try (PreparedStatement ps = conn.prepareStatement(updateStockSQL)) {
                     ps.setInt(1, quantite);
                     ps.setString(2, ref);
@@ -183,7 +183,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                 }
             }
 
-            conn.commit(); // Tout s’est bien passé
+            conn.commit(); // Tout s'est bien passé
             return true;
 
         } catch (SQLException e) {
@@ -191,7 +191,6 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
             return false;
         }
     }
-
 
 
 }
