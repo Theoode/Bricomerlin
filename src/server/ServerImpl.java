@@ -52,7 +52,6 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         }
     }
 
-
     @Override
     public List<String> rechercherArticlesParFamille(String nomFamille) throws RemoteException {
         List<String> articles = new ArrayList<>();
@@ -194,8 +193,27 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
 
     @Override
     public List<String> getArticlesDisponibles() throws RemoteException {
-        return List.of();
+        List<String> articlesDisponibles = new ArrayList<>();
+        String query = "SELECT idReference, nom FROM article WHERE enStock > 0";
+
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                String reference = rs.getString("idReference");
+                String nom = rs.getString("nom");
+                articlesDisponibles.add(String.format("%s - %s", reference, nom));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Erreur lors de la récupération des articles disponibles.", e);
+        }
+
+        return articlesDisponibles;
     }
+
 
 
 }
