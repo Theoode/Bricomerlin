@@ -33,7 +33,6 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
 
     @Override
     public List<String> rechercherArticlesParFamille(String famille) throws RemoteException {
-        // Juste un exemple, normalement, les articles sont classés par famille
         return Arrays.asList("Article1-" + famille, "Article2-" + famille);
     }
 

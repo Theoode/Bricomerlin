@@ -14,7 +14,7 @@ public class ServeurRMI {
 
             Services service = new ServerImpl();
             Naming.rebind("rmi://localhost/ServiceStock", service);
-            System.out.println("Serveur prêt et service 'ServiceStock' enregistré...");
+            System.out.println("Serveur prêt");
         } catch (Exception e) {
             e.printStackTrace();
         }
