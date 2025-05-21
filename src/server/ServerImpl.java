@@ -192,5 +192,10 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         }
     }
 
+    @Override
+    public List<String> getArticlesDisponibles() throws RemoteException {
+        return List.of();
+    }
+
 
 }
