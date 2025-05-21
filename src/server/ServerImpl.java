@@ -56,7 +56,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
     @Override
     public List<String> rechercherArticlesParFamille(String nomFamille) throws RemoteException {
         List<String> articles = new ArrayList<>();
-        String query = "SELECT idReference,nom FROM Article A,Famille F WHERE A.idFamille = F.idFamille AND F.nomFamille = ?";
+        String query = "SELECT idReference,nom FROM Article A,Famille F WHERE A.idFamille = F.idFamille AND A.EnStock > 0 AND F.nomFamille = ?";
 
         try (Connection conn = DBManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
