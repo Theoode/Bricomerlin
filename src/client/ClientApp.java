@@ -51,7 +51,7 @@ public class ClientApp {
                 }
             });
 
-            btnAcheter.addActionListener(e -> {
+            /*btnAcheter.addActionListener(e -> {
                 try {
                     String ref = refField.getText();
                     int qte = Integer.parseInt(qteField.getText());
@@ -60,7 +60,7 @@ public class ClientApp {
                 } catch (Exception ex) {
                     resultArea.append("❌ Erreur lors de l'achat : " + ex.getMessage() + "\n");
                 }
-            });
+            });*/
 
         } catch (Exception e) {
             resultArea.append("❌ Erreur de connexion au serveur : " + e.getMessage() + "\n");
