@@ -21,22 +21,37 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
 
     @Override
     public String consulterStock(String reference) throws RemoteException {
-        try (Connection conn = DBManager.getConnection()) {
-            String query = "SELECT enStock FROM article WHERE idReference = ?";
-            try (PreparedStatement ps = conn.prepareStatement(query)) {
-                ps.setString(1, reference);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    return "Stock disponible: " + rs.getInt("enStock");
-                } else {
-                    return "Article non trouvé";
-                }
+        String query = """
+        SELECT a.enStock, a.prixUnitaire, f.nomFamille,a.nom
+        FROM Article a 
+        JOIN Famille f ON a.idFamille = f.idFamille 
+        WHERE a.idReference = ?
+        """;
+
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, reference);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int stock = rs.getInt("enStock");
+                double prix = rs.getDouble("prixUnitaire");
+                String nom= rs.getString("nom");
+                String famille = rs.getString("nomFamille");
+
+                return String.format("Article %s | Nom: %s | Famille: %s | Prix: %.2f€ | Stock: %d",
+                        reference,nom, famille, prix, stock);
+            } else {
+                return "Article non trouvé";
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
             return "Erreur lors de la consultation du stock.";
         }
     }
+
 
     @Override
     public List<String> rechercherArticlesParFamille(String nomFamille) throws RemoteException {
@@ -50,7 +65,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                articles.add(rs.getString("idReference"));
+                articles.add(rs.getString("idReference") + " - " + rs.getString("nom"));
             }
 
         } catch (SQLException e) {
