@@ -1,9 +1,12 @@
 package server;
-
 import rmi.Services;
-
+import utils.DBManager;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -20,15 +23,27 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         stock = new HashMap<>();
         factures = new HashMap<>();
         chiffreAffaire = 0.0;
-
-
         stock.put("A123", 10);
         stock.put("B456", 5);
     }
 
     @Override
     public String consulterStock(String reference) throws RemoteException {
-        return stock.containsKey(reference) ? "Stock disponible: " + stock.get(reference) : "Article non trouvé";
+        try (Connection conn = DBManager.getConnection()) {
+            String query = "SELECT enStock FROM article WHERE idReference = ?";
+            try (PreparedStatement ps = conn.prepareStatement(query)) {
+                ps.setString(1, reference);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    return "Stock disponible: " + rs.getInt("enStock");
+                } else {
+                    return "Article non trouvé";
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Erreur lors de la consultation du stock.";
+        }
     }
 
     @Override
