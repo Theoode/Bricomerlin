@@ -7,24 +7,16 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ServerImpl extends UnicastRemoteObject implements Services {
     private Map<String, Integer> stock;
-    private Map<Integer, String> factures;
     private double chiffreAffaire;
 
     // Constructeur
     protected ServerImpl() throws RemoteException {
         super();
         stock = new HashMap<>();
-        factures = new HashMap<>();
-        chiffreAffaire = 0.0;
-        stock.put("A123", 10);
-        stock.put("B456", 5);
     }
 
     @Override
@@ -47,33 +39,57 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
     }
 
     @Override
-    public List<String> rechercherArticlesParFamille(String famille) throws RemoteException {
-        return Arrays.asList("Article1-" + famille, "Article2-" + famille);
-    }
+    public List<String> rechercherArticlesParFamille(String nomFamille) throws RemoteException {
+        List<String> articles = new ArrayList<>();
+        String query = "SELECT idReference,nom FROM Article A,Famille F WHERE A.idFamille = F.idFamille AND F.nomFamille = ?";
 
-    @Override
-    public boolean acheterArticle(String reference, int quantite) throws RemoteException {
-        if (stock.containsKey(reference) && stock.get(reference) >= quantite) {
-            stock.put(reference, stock.get(reference) - quantite);
-            chiffreAffaire += quantite * 100;  // Supposons que chaque article coûte 100€
-            return true;
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, nomFamille);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                articles.add(rs.getString("idReference"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Erreur lors de la recherche des articles pour la famille: " + nomFamille, e);
         }
-        return false;
-    }
 
-    @Override
-    public String consulterFacture(int idFacture) throws RemoteException {
-        return factures.getOrDefault(idFacture, "Facture introuvable");
-    }
-
-    @Override
-    public double calculerChiffreAffaire(String date) throws RemoteException {
-        return chiffreAffaire;
+        return articles;
     }
 
     @Override
     public boolean ajouterStockProduit(String reference, int quantite) throws RemoteException {
-        stock.put(reference, stock.getOrDefault(reference, 0) + quantite);
-        return true;
+        String queryCheck = "SELECT enStock FROM Article WHERE idReference = ?";
+        String queryUpdate = "UPDATE Article SET enStock = enStock + ? WHERE idReference = ?";
+
+        try (Connection conn = DBManager.getConnection()) {
+            // Vérifier que l'article existe
+            try (PreparedStatement psCheck = conn.prepareStatement(queryCheck)) {
+                psCheck.setString(1, reference);
+                ResultSet rs = psCheck.executeQuery();
+
+                if (!rs.next()) {
+                    return false; // Article non trouvé
+                }
+            }
+
+            // Mise à jour du stock
+            try (PreparedStatement psUpdate = conn.prepareStatement(queryUpdate)) {
+                psUpdate.setInt(1, quantite);
+                psUpdate.setString(2, reference);
+                psUpdate.executeUpdate();
+                return true;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Erreur lors de l'ajout de stock pour l'article: " + reference, e);
+        }
     }
+
+
 }
