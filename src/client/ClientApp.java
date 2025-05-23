@@ -58,7 +58,7 @@ public class ClientApp {
                 }
             });
 
-            /*btnAcheter.addActionListener(e -> {
+            btnAcheter.addActionListener(e -> {
                 try {
                     String ref = refField.getText();
                     int qte = Integer.parseInt(qteField.getText());
@@ -67,7 +67,7 @@ public class ClientApp {
                 } catch (Exception ex) {
                     articleResultArea.append("❌ Erreur : " + ex.getMessage() + "\n");
                 }
-            });*/
+            });
 
             btnRechercherFamille.addActionListener(e -> {
                 try {

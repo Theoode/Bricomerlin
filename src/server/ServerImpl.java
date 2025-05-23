@@ -214,6 +214,33 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         return articlesDisponibles;
     }
 
+    @Override
+    public boolean acheterArticle(String reference, int quantite) throws RemoteException {
+        String queryStock = "SELECT enStock FROM article WHERE idReference = ?";
+        String updateStock = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
+
+        try (Connection conn = DBManager.getConnection()) {
+            try (PreparedStatement ps = conn.prepareStatement(queryStock)) {
+                ps.setString(1, reference);
+                ResultSet rs = ps.executeQuery();
+
+                if (!rs.next()) return false;
+                int enStock = rs.getInt("enStock");
+                if (enStock < quantite) return false;
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(updateStock)) {
+                ps.setInt(1, quantite);
+                ps.setString(2, reference);
+                ps.executeUpdate();
+            }
+
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
 
 }
