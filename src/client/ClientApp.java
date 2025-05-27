@@ -24,33 +24,56 @@ public class ClientApp {
             Services service = (Services) Naming.lookup("rmi://localhost/ServiceStock");
 
             // Onglet 1 : Gestion des articles
-            JPanel articlePanel = new JPanel(new BorderLayout());
+            JPanel articlePanel = new JPanel();
+            articlePanel.setLayout(new BoxLayout(articlePanel, BoxLayout.Y_AXIS));
+
             JTextArea articleResultArea = new JTextArea(10, 50);
             articleResultArea.setEditable(false);
 
-            JTextField refField = new JTextField();
-            JTextField qteField = new JTextField();
-            JTextField familleField = new JTextField();
-            JButton btnConsulter = new JButton("Consulter l'article");
-            JButton btnAcheter = new JButton("Acheter l'article");
-            JButton btnRechercherFamille = new JButton("Rechercher par famille");
+            // Section 1 : Rechercher un article par référence
+            JPanel refPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JTextField refField = new JTextField(15);
+            JButton btnConsulter = new JButton("🔍 Consulter article");
+            refPanel.setBorder(BorderFactory.createTitledBorder("Recherche par référence"));
+            refPanel.add(new JLabel("Référence :"));
+            refPanel.add(refField);
+            refPanel.add(btnConsulter);
 
-            JPanel topPanel = new JPanel(new GridLayout(4, 2, 10, 10));
-            topPanel.add(new JLabel("Référence article :")); topPanel.add(refField);
-            topPanel.add(new JLabel("Quantité :")); topPanel.add(qteField);
-            topPanel.add(new JLabel("Nom de la famille :")); topPanel.add(familleField);
-            topPanel.add(btnConsulter); topPanel.add(btnAcheter);
-
-            JPanel famillePanel = new JPanel();
+            // Section 2 : Rechercher par famille
+            JPanel famillePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JTextField familleField = new JTextField(15);
+            JButton btnRechercherFamille = new JButton("🔍 Rechercher famille");
+            famillePanel.setBorder(BorderFactory.createTitledBorder("Recherche par famille"));
+            famillePanel.add(new JLabel("Famille :"));
+            famillePanel.add(familleField);
             famillePanel.add(btnRechercherFamille);
 
-            articlePanel.add(topPanel, BorderLayout.NORTH);
-            articlePanel.add(famillePanel, BorderLayout.CENTER);
-            articlePanel.add(new JScrollPane(articleResultArea), BorderLayout.SOUTH);
+            // Section 3 : Ajouter du stock
+            JPanel ajoutStockPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JTextField refAjoutField = new JTextField(10);
+            JTextField qteAjoutField = new JTextField(5);
+            JButton btnAjouterStock = new JButton("➕ Ajouter au stock");
+            ajoutStockPanel.setBorder(BorderFactory.createTitledBorder("Ajout de stock"));
+            ajoutStockPanel.add(new JLabel("Référence :"));
+            ajoutStockPanel.add(refAjoutField);
+            ajoutStockPanel.add(new JLabel("Quantité :"));
+            ajoutStockPanel.add(qteAjoutField);
+            ajoutStockPanel.add(btnAjouterStock);
 
+            // Ajout des sections à l'onglet
+            articlePanel.add(refPanel);
+            articlePanel.add(famillePanel);
+            articlePanel.add(ajoutStockPanel);
+            articlePanel.add(new JScrollPane(articleResultArea));
+
+            // Événements
             btnConsulter.addActionListener(e -> {
                 try {
-                    String ref = refField.getText();
+                    String ref = refField.getText().trim();
+                    if (ref.isEmpty()) {
+                        articleResultArea.append("⚠️ Référence vide\n");
+                        return;
+                    }
                     String res = service.consulterStock(ref);
                     articleResultArea.append("🟡 Infos : " + res + "\n");
                 } catch (Exception ex) {
@@ -58,27 +81,40 @@ public class ClientApp {
                 }
             });
 
-            btnAcheter.addActionListener(e -> {
-                try {
-                    String ref = refField.getText();
-                    int qte = Integer.parseInt(qteField.getText());
-                    boolean success = service.acheterArticle(ref, qte);
-                    articleResultArea.append(success ? "✅ Achat effectué\n" : "❌ Achat échoué\n");
-                } catch (Exception ex) {
-                    articleResultArea.append("❌ Erreur : " + ex.getMessage() + "\n");
-                }
-            });
-
             btnRechercherFamille.addActionListener(e -> {
                 try {
-                    String nomFamille = familleField.getText();
+                    String nomFamille = familleField.getText().trim();
+                    if (nomFamille.isEmpty()) {
+                        articleResultArea.append("⚠️ Nom de famille vide\n");
+                        return;
+                    }
                     List<String> articles = service.rechercherArticlesParFamille(nomFamille);
-                    articleResultArea.append("🔍 Articles de la famille " + nomFamille + " :\n");
+                    articleResultArea.append("🔍 Articles de la famille \"" + nomFamille + "\" :\n");
                     for (String a : articles) articleResultArea.append("- " + a + "\n");
                 } catch (Exception ex) {
                     articleResultArea.append("❌ Erreur famille : " + ex.getMessage() + "\n");
                 }
             });
+
+            btnAjouterStock.addActionListener(e -> {
+                try {
+                    String ref = refAjoutField.getText().trim();
+                    int qte = Integer.parseInt(qteAjoutField.getText().trim());
+                    if (ref.isEmpty() || qte <= 0) {
+                        articleResultArea.append("⚠️ Référence ou quantité invalide\n");
+                        return;
+                    }
+                    boolean success = service.ajouterStockProduit(ref, qte);
+                    articleResultArea.append(success
+                            ? "✅ Stock mis à jour pour " + ref + " (+ " + qte + ")\n"
+                            : "❌ Échec de la mise à jour du stock\n");
+                } catch (NumberFormatException nfe) {
+                    articleResultArea.append("❌ Quantité invalide\n");
+                } catch (Exception ex) {
+                    articleResultArea.append("❌ Erreur ajout stock : " + ex.getMessage() + "\n");
+                }
+            });
+
 
             // Onglet 2 : Créer une commande
             JPanel commandePanel = new JPanel(new BorderLayout());

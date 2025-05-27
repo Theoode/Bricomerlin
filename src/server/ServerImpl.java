@@ -16,8 +16,11 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
     // Constructeur
     protected ServerImpl() throws RemoteException {
         super();
+        System.out.println("Constructeur ServerImpl lancé");
         stock = new HashMap<>();
+        System.out.println("Constructeur ServerImpl terminé");
     }
+
 
     @Override
     public String consulterStock(String reference) throws RemoteException {
