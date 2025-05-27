@@ -1,6 +1,8 @@
 package server;
 import rmi.Services;
 import utils.DBManager;
+
+
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
@@ -8,6 +10,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+
 
 public class ServerImpl extends UnicastRemoteObject implements Services {
     private Map<String, Integer> stock;
@@ -111,7 +121,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
     @Override
     public boolean creerCommande(String nomAcheteur, Map<String, Integer> articles) throws RemoteException {
         String insertCommandeSQL = "INSERT INTO commandes(nom_acheteur, total_prix) VALUES (?, ?)";
-        String insertCommandeProduitSQL = "INSERT INTO commande_produit(idReference, id_commande, quantite) VALUES (?, ?, ?)";
+        String insertCommandeProduitSQL = "INSERT INTO article_commande(idReference, id_commande, quantite) VALUES (?, ?, ?)";
         String updateStockSQL = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
         String selectArticleSQL = "SELECT prixUnitaire, enStock FROM article WHERE idReference = ?";
 
@@ -132,7 +142,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
 
                     if (!rs.next()) {
                         conn.rollback();
-                        return false; // Article introuvable
+                        return false;
                     }
 
                     double prix = rs.getDouble("prixUnitaire");
@@ -140,7 +150,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
 
                     if (enStock < quantite) {
                         conn.rollback();
-                        return false; // Stock insuffisant
+                        return false;
                     }
 
                     prixArticles.put(ref, prix);
@@ -185,7 +195,40 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                 }
             }
 
-            conn.commit(); // Tout s'est bien passé
+            conn.commit();
+
+            try {
+                File dossierFactures = new File("factures");
+                if (!dossierFactures.exists()) dossierFactures.mkdirs();
+
+                String fileName = "factures/ticket_" + idCommande + ".txt";
+                try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
+                    writer.println("🧾 Ticket de caisse - BricoMerlin");
+                    writer.println("Commande n° : " + idCommande);
+                    writer.println("Client : " + nomAcheteur);
+                    writer.println("Date : " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    writer.println();
+                    writer.printf("%-15s %-10s %-15s %-10s%n", "Référence", "Quantité", "Prix Unitaire", "Total");
+                    writer.println("---------------------------------------------------------------");
+
+                    for (Map.Entry<String, Integer> entry : articles.entrySet()) {
+                        String ref = entry.getKey();
+                        int qte = entry.getValue();
+                        double prix = prixArticles.get(ref);
+                        double total = prix * qte;
+
+                        writer.printf("%-15s %-10d %-15.2f %-10.2f%n", ref, qte, prix, total);
+                    }
+
+                    writer.println("---------------------------------------------------------------");
+                    writer.printf("Total à payer : %.2f €%n", totalPrix);
+                }
+
+                System.out.println("Ticket TXT généré dans factures/: ticket_" + idCommande + ".txt");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             return true;
 
         } catch (SQLException e) {
