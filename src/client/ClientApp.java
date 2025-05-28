@@ -4,6 +4,9 @@ import rmi.Services;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.rmi.Naming;
 import java.util.HashMap;
 import java.util.List;
@@ -185,7 +188,6 @@ public class ClientApp {
                     commandeLog.append("Erreur : " + ex.getMessage() + "\n");
                 }
             });
-
             // Supprimer un article du panier
             btnSupprimerArticle.addActionListener(e -> {
                 String selection = (String) panierComboBox.getSelectedItem();
@@ -212,7 +214,6 @@ public class ClientApp {
                     commandeLog.append("Erreur lors de la suppression : " + ex.getMessage() + "\n");
                 }
             });
-
             // Envoyer la commande
             btnEnvoyerCommande.addActionListener(e -> {
                 if (articlesCommande.isEmpty()) {
@@ -238,10 +239,75 @@ public class ClientApp {
 
 
 
+            JPanel facturationPanel = new JPanel(new BorderLayout());
+            JTextField idCommandeField = new JTextField(10);
+            JTextArea ticketArea = new JTextArea(20, 50);
+            ticketArea.setEditable(false);
+            JButton btnAfficherTicket = new JButton("Afficher Ticket");
+            JButton btnReglerCommande = new JButton("Régler la commande");
+            JLabel statutPaiementLabel = new JLabel("Statut : inconnu");
+
+            // Zone d'entrée pour l’ID de commande
+            JPanel topPanel = new JPanel();
+            topPanel.add(new JLabel("ID Commande :"));
+            topPanel.add(idCommandeField);
+            topPanel.add(btnAfficherTicket);
+            topPanel.add(btnReglerCommande);
+            topPanel.add(statutPaiementLabel);
+
+            facturationPanel.add(topPanel, BorderLayout.NORTH);
+            facturationPanel.add(new JScrollPane(ticketArea), BorderLayout.CENTER);
+
+            btnAfficherTicket.addActionListener(e -> {
+                try {
+                    int idCommande = Integer.parseInt(idCommandeField.getText().trim());
+                    File ticket = new File("factures/ticket_" + idCommande + ".txt");
+                    if (!ticket.exists()) {
+                        ticketArea.setText("❌ Ticket non trouvé pour la commande #" + idCommande);
+                        return;
+                    }
+
+                    // Lire le contenu du fichier
+                    StringBuilder sb = new StringBuilder();
+                    try (BufferedReader br = new BufferedReader(new FileReader(ticket))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line).append("\n");
+                        }
+                    }
+
+                    ticketArea.setText(sb.toString());
+
+                    // Afficher statut paiement
+                    String statut = service.getStatutPaiement(idCommande); // Méthode à implémenter côté serveur
+                    statutPaiementLabel.setText("Statut : " + statut);
+
+                } catch (Exception ex) {
+                    ticketArea.setText("Erreur : " + ex.getMessage());
+                }
+            });
+            btnReglerCommande.addActionListener(e -> {
+                try {
+                    int idCommande = Integer.parseInt(idCommandeField.getText().trim());
+                    boolean success = service.reglerCommande(idCommande); // Méthode à créer côté serveur
+
+                    if (success) {
+                        ticketArea.append("\n✅ Commande réglée !");
+                        statutPaiementLabel.setText("Statut : Payée");
+                    } else {
+                        ticketArea.append("\n❌ Échec du paiement (commande déjà payée ?)");
+                    }
+                } catch (Exception ex) {
+                    ticketArea.setText("Erreur : " + ex.getMessage());
+                }
+            });
+
+
             // Onglets
             JTabbedPane tabbedPane = new JTabbedPane();
             tabbedPane.addTab("Articles", articlePanel);
             tabbedPane.addTab("Créer commande", commandePanel);
+            tabbedPane.addTab("Facturation", facturationPanel);
 
             frame.add(tabbedPane);
             frame.setVisible(true);

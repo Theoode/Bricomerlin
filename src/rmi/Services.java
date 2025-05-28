@@ -12,5 +12,6 @@ public interface Services extends Remote {
     boolean ajouterStockProduit(String reference, int quantite) throws RemoteException;
     boolean creerCommande(Map<String, Integer> articles) throws RemoteException;
     List<String> getArticlesDisponibles() throws RemoteException;
-    boolean acheterArticle(String reference, int quantite) throws RemoteException;
+    String getStatutPaiement(int idCommande) throws RemoteException;
+    boolean reglerCommande(int idCommande) throws RemoteException;
 }

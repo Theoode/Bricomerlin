@@ -261,27 +261,37 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
     }
 
     @Override
-    public boolean acheterArticle(String reference, int quantite) throws RemoteException {
-        String queryStock = "SELECT enStock FROM article WHERE idReference = ?";
-        String updateStock = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
+    public String getStatutPaiement(int idCommande) throws RemoteException {
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT statut_paiement FROM commandes WHERE id_commande = ?")) {
+            ps.setInt(1, idCommande);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getString("statut_paiement");
+            }
+            return "Inconnue";
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Erreur";
+        }
+    }
 
+    @Override
+    public boolean reglerCommande(int idCommande) throws RemoteException {
         try (Connection conn = DBManager.getConnection()) {
-            try (PreparedStatement ps = conn.prepareStatement(queryStock)) {
-                ps.setString(1, reference);
-                ResultSet rs = ps.executeQuery();
-
-                if (!rs.next()) return false;
-                int enStock = rs.getInt("enStock");
-                if (enStock < quantite) return false;
+            PreparedStatement check = conn.prepareStatement("SELECT statut_paiement FROM commandes WHERE id_commande = ?");
+            check.setInt(1, idCommande);
+            ResultSet rs = check.executeQuery();
+            if (rs.next()) {
+                String statut = rs.getString("statut_paiement");
+                if ("Payée".equalsIgnoreCase(statut)) return false; // déjà payée
+            } else {
+                return false; // commande inconnue
             }
 
-            try (PreparedStatement ps = conn.prepareStatement(updateStock)) {
-                ps.setInt(1, quantite);
-                ps.setString(2, reference);
-                ps.executeUpdate();
-            }
-
-            return true;
+            PreparedStatement update = conn.prepareStatement("UPDATE commandes SET statut_paiement = 'Payée' WHERE id_commande = ?");
+            update.setInt(1, idCommande);
+            return update.executeUpdate() == 1;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
