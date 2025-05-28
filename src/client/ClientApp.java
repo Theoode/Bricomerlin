@@ -1,6 +1,6 @@
 package client;
 
-import rmi.Services;
+import rmi.ServicesServeur;
 
 import javax.swing.*;
 import java.awt.*;
@@ -24,7 +24,7 @@ public class ClientApp {
         frame.setSize(750, 550);
 
         try {
-            Services service = (Services) Naming.lookup("rmi://localhost/ServiceStock");
+            ServicesServeur service = (ServicesServeur) Naming.lookup("rmi://localhost/ServiceStock");
 
             // Onglet 1 : Gestion des articles
             JPanel articlePanel = new JPanel();

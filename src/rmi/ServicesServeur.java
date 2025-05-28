@@ -5,8 +5,7 @@ import java.rmi.RemoteException;
 import java.util.List;
 import java.util.Map;
 
-// Créer l'interface de l'objet distant
-public interface Services extends Remote {
+public interface ServicesServeur extends Remote {
     String consulterStock(String reference) throws RemoteException;
     List<String> rechercherArticlesParFamille(String famille) throws RemoteException;
     boolean ajouterStockProduit(String reference, int quantite) throws RemoteException;
@@ -15,5 +14,5 @@ public interface Services extends Remote {
     String getStatutPaiement(int idCommande) throws RemoteException;
     boolean reglerCommande(int idCommande) throws RemoteException;
     double calculerChiffreAffaires(String date) throws RemoteException;
-
 }
+

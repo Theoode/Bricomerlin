@@ -1,5 +1,5 @@
 package server;
-import rmi.Services;
+import rmi.ServicesServeur;
 import utils.DBManager;
 
 
@@ -19,7 +19,7 @@ import java.util.List;
 
 
 
-public class ServerImpl extends UnicastRemoteObject implements Services {
+public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
     private Map<String, Integer> stock;
 
     protected ServerImpl() throws RemoteException {
@@ -92,7 +92,6 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         String queryUpdate = "UPDATE Article SET enStock = enStock + ? WHERE idReference = ?";
 
         try (Connection conn = DBManager.getConnection()) {
-            // Vérifier que l'article existe
             try (PreparedStatement psCheck = conn.prepareStatement(queryCheck)) {
                 psCheck.setString(1, reference);
                 ResultSet rs = psCheck.executeQuery();
