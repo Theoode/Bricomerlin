@@ -71,13 +71,13 @@ public class ClientApp {
                 try {
                     String ref = refField.getText().trim();
                     if (ref.isEmpty()) {
-                        articleResultArea.append("⚠️ Référence vide\n");
+                        articleResultArea.append("Référence vide\n");
                         return;
                     }
                     String res = service.consulterStock(ref);
-                    articleResultArea.append("🟡 Infos : " + res + "\n");
+                    articleResultArea.append("Infos : " + res + "\n");
                 } catch (Exception ex) {
-                    articleResultArea.append("❌ Erreur : " + ex.getMessage() + "\n");
+                    articleResultArea.append("Erreur : " + ex.getMessage() + "\n");
                 }
             });
 
@@ -89,10 +89,10 @@ public class ClientApp {
                         return;
                     }
                     List<String> articles = service.rechercherArticlesParFamille(nomFamille);
-                    articleResultArea.append("🔍 Articles de la famille \"" + nomFamille + "\" :\n");
+                    articleResultArea.append("Articles de la famille \"" + nomFamille + "\" :\n");
                     for (String a : articles) articleResultArea.append("- " + a + "\n");
                 } catch (Exception ex) {
-                    articleResultArea.append("❌ Erreur famille : " + ex.getMessage() + "\n");
+                    articleResultArea.append(" Erreur famille : " + ex.getMessage() + "\n");
                 }
             });
 
@@ -101,17 +101,17 @@ public class ClientApp {
                     String ref = refAjoutField.getText().trim();
                     int qte = Integer.parseInt(qteAjoutField.getText().trim());
                     if (ref.isEmpty() || qte <= 0) {
-                        articleResultArea.append("⚠️ Référence ou quantité invalide\n");
+                        articleResultArea.append(" Référence ou quantité invalide\n");
                         return;
                     }
                     boolean success = service.ajouterStockProduit(ref, qte);
                     articleResultArea.append(success
-                            ? "✅ Stock mis à jour pour " + ref + " (+ " + qte + ")\n"
-                            : "❌ Échec de la mise à jour du stock\n");
+                            ? "Stock mis à jour pour " + ref + " (+ " + qte + ")\n"
+                            : "Échec de la mise à jour du stock\n");
                 } catch (NumberFormatException nfe) {
-                    articleResultArea.append("❌ Quantité invalide\n");
+                    articleResultArea.append("Quantité invalide\n");
                 } catch (Exception ex) {
-                    articleResultArea.append("❌ Erreur ajout stock : " + ex.getMessage() + "\n");
+                    articleResultArea.append("Erreur ajout stock : " + ex.getMessage() + "\n");
                 }
             });
 
@@ -121,6 +121,7 @@ public class ClientApp {
             JTextField nomAcheteurField = new JTextField(20);
             JTextField qteCommandeField = new JTextField(5);
             JComboBox<String> articleComboBox = new JComboBox<>();
+            JComboBox<String> panierComboBox = new JComboBox<>();
             JLabel prixTotalLabel = new JLabel("💰 Total : 0.00 €");
             JTextArea commandeLog = new JTextArea(10, 50);
             commandeLog.setEditable(false);
@@ -128,70 +129,114 @@ public class ClientApp {
             Map<String, Integer> articlesCommande = new HashMap<>();
             final double[] totalCommande = {0.0};
 
-            // Charger la ComboBox avec les articles disponibles
             List<String> articlesDispo = service.getArticlesDisponibles();
             for (String article : articlesDispo) {
-                articleComboBox.addItem(article); // "REF123 - Marteau"
+                articleComboBox.addItem(article); // Format : "REF123 - Marteau"
             }
 
             JButton btnAjouterArticle = new JButton("Ajouter article");
             JButton btnEnvoyerCommande = new JButton("Envoyer commande");
+            JButton btnSupprimerArticle = new JButton("Supprimer article");
 
-            JPanel formCommande = new JPanel(new GridLayout(5, 2, 10, 10));
-            formCommande.add(new JLabel("Nom de l'acheteur :")); formCommande.add(nomAcheteurField);
-            formCommande.add(new JLabel("Article disponible :")); formCommande.add(articleComboBox);
+            JPanel formCommande = new JPanel(new GridLayout(6, 2, 10, 10));
+            formCommande.add(new JLabel("Articles en stock :")); formCommande.add(articleComboBox);
             formCommande.add(new JLabel("Quantité :")); formCommande.add(qteCommandeField);
             formCommande.add(btnAjouterArticle); formCommande.add(btnEnvoyerCommande);
+            formCommande.add(new JLabel("Supprimer du panier :")); formCommande.add(panierComboBox);
+            formCommande.add(btnSupprimerArticle);
 
             commandePanel.add(formCommande, BorderLayout.NORTH);
             commandePanel.add(new JScrollPane(commandeLog), BorderLayout.CENTER);
             commandePanel.add(prixTotalLabel, BorderLayout.SOUTH);
 
+            // Ajouter un article au panier
             btnAjouterArticle.addActionListener(e -> {
                 try {
                     String selection = (String) articleComboBox.getSelectedItem();
                     if (selection == null || selection.isEmpty()) return;
 
-                    String ref = selection.split(" - ")[0]; // extrait "REF123"
+                    String ref = selection.split(" - ")[0];
                     int qte = Integer.parseInt(qteCommandeField.getText());
 
                     String res = service.consulterStock(ref);
                     String prixStr = res.split("Prix: ")[1].split("€")[0].trim();
                     double prix = Double.parseDouble(prixStr.replace(",", "."));
 
-                    articlesCommande.put(ref, articlesCommande.getOrDefault(ref, 0) + qte);
+                    int qteTotale = articlesCommande.getOrDefault(ref, 0) + qte;
+                    articlesCommande.put(ref, qteTotale);
                     totalCommande[0] += prix * qte;
 
-                    commandeLog.append("🟡 " + ref + " x" + qte + " → " + String.format("%.2f", prix * qte) + " €\n");
-                    prixTotalLabel.setText("💰 Total : " + String.format("%.2f", totalCommande[0]) + " €");
+                    // Mise à jour ou ajout dans la ComboBox panier
+                    boolean existe = false;
+                    for (int i = 0; i < panierComboBox.getItemCount(); i++) {
+                        String item = panierComboBox.getItemAt(i);
+                        if (item.startsWith(ref + " ")) {
+                            panierComboBox.removeItemAt(i);
+                            existe = true;
+                            break;
+                        }
+                    }
+                    panierComboBox.addItem(ref + " x" + qteTotale);
 
+                    commandeLog.append(ref + " x" + qte + " → " + String.format("%.2f", prix * qte) + " €\n");
+                    prixTotalLabel.setText("Total : " + String.format("%.2f", totalCommande[0]) + " €");
                     qteCommandeField.setText("");
                 } catch (Exception ex) {
-                    commandeLog.append("❌ Erreur : " + ex.getMessage() + "\n");
+                    commandeLog.append("Erreur : " + ex.getMessage() + "\n");
                 }
             });
 
+            // Supprimer un article du panier
+            btnSupprimerArticle.addActionListener(e -> {
+                String selection = (String) panierComboBox.getSelectedItem();
+                if (selection == null || selection.isEmpty()) return;
+
+                String ref = selection.split(" x")[0];
+
+                Integer qte = articlesCommande.get(ref);
+                if (qte == null) return;
+
+                try {
+                    String res = service.consulterStock(ref);
+                    String prixStr = res.split("Prix: ")[1].split("€")[0].trim();
+                    double prix = Double.parseDouble(prixStr.replace(",", "."));
+
+                    totalCommande[0] -= prix * qte;
+                    prixTotalLabel.setText("Total : " + String.format("%.2f", totalCommande[0]) + " €");
+
+                    articlesCommande.remove(ref);
+                    panierComboBox.removeItem(selection);
+
+                    commandeLog.append("❌ Supprimé : " + ref + " x" + qte + "\n");
+                } catch (Exception ex) {
+                    commandeLog.append("Erreur lors de la suppression : " + ex.getMessage() + "\n");
+                }
+            });
+
+            // Envoyer la commande
             btnEnvoyerCommande.addActionListener(e -> {
-                String nomAcheteur = nomAcheteurField.getText();
-                if (nomAcheteur.isEmpty() || articlesCommande.isEmpty()) {
-                    commandeLog.append("❌ Remplir tous les champs et ajouter au moins un article.\n");
+                if (articlesCommande.isEmpty()) {
+                    commandeLog.append("Ajouter au moins un article.\n");
                     return;
                 }
+
                 try {
-                    boolean success = service.creerCommande(nomAcheteur, articlesCommande);
+                    boolean success = service.creerCommande(articlesCommande);
                     if (success) {
                         commandeLog.append("✅ Commande créée avec succès !\n");
                         articlesCommande.clear();
-                        nomAcheteurField.setText("");
-                        prixTotalLabel.setText("💰 Total : 0.00 €");
+                        panierComboBox.removeAllItems();
+                        prixTotalLabel.setText("Total : 0.00 €");
                         totalCommande[0] = 0.0;
                     } else {
                         commandeLog.append("❌ Échec de la création de la commande.\n");
                     }
                 } catch (Exception ex) {
-                    commandeLog.append("❌ Erreur : " + ex.getMessage() + "\n");
+                    commandeLog.append("Erreur : " + ex.getMessage() + "\n");
                 }
             });
+
+
 
             // Onglets
             JTabbedPane tabbedPane = new JTabbedPane();
@@ -202,7 +247,7 @@ public class ClientApp {
             frame.setVisible(true);
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "❌ Connexion au serveur RMI échouée : " + e.getMessage());
+            JOptionPane.showMessageDialog(frame, "Connexion au serveur RMI échouée : " + e.getMessage());
             e.printStackTrace();
         }
     }

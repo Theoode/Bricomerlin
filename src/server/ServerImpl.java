@@ -119,19 +119,19 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
     }
 
     @Override
-    public boolean creerCommande(String nomAcheteur, Map<String, Integer> articles) throws RemoteException {
-        String insertCommandeSQL = "INSERT INTO commandes(nom_acheteur, total_prix) VALUES (?, ?)";
+    public boolean creerCommande(Map<String, Integer> articles) throws RemoteException {
+        String insertCommandeSQL = "INSERT INTO commandes(total_prix, statut_paiement) VALUES ( ?, ?)";
         String insertCommandeProduitSQL = "INSERT INTO article_commande(idReference, id_commande, quantite) VALUES (?, ?, ?)";
         String updateStockSQL = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
-        String selectArticleSQL = "SELECT prixUnitaire, enStock FROM article WHERE idReference = ?";
+        String selectArticleSQL = "SELECT nom, prixUnitaire, enStock FROM article WHERE idReference = ?";
 
         try (Connection conn = DBManager.getConnection()) {
-            conn.setAutoCommit(false); // Démarre une transaction
+            conn.setAutoCommit(false);
 
             double totalPrix = 0.0;
             Map<String, Double> prixArticles = new HashMap<>();
+            Map<String, String> nomsArticles = new HashMap<>();
 
-            // Vérifier stock et récupérer prix
             for (Map.Entry<String, Integer> entry : articles.entrySet()) {
                 String ref = entry.getKey();
                 int quantite = entry.getValue();
@@ -145,6 +145,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                         return false;
                     }
 
+                    String nom = rs.getString("nom");
                     double prix = rs.getDouble("prixUnitaire");
                     int enStock = rs.getInt("enStock");
 
@@ -153,16 +154,16 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                         return false;
                     }
 
+                    nomsArticles.put(ref, nom);
                     prixArticles.put(ref, prix);
                     totalPrix += prix * quantite;
                 }
             }
 
-            // 1. Créer la commande
             int idCommande;
             try (PreparedStatement ps = conn.prepareStatement(insertCommandeSQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                ps.setString(1, nomAcheteur);
-                ps.setDouble(2, totalPrix);
+                ps.setDouble(1, totalPrix);
+                ps.setString(2, "En Attente");
                 ps.executeUpdate();
 
                 ResultSet rs = ps.getGeneratedKeys();
@@ -174,12 +175,11 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                 }
             }
 
-            // 2. Ajouter les articles à commande_produit + mise à jour du stock
+            // Insertion des articles + mise à jour du stock
             for (Map.Entry<String, Integer> entry : articles.entrySet()) {
                 String ref = entry.getKey();
                 int quantite = entry.getValue();
 
-                // Insertion dans commande_produit
                 try (PreparedStatement ps = conn.prepareStatement(insertCommandeProduitSQL)) {
                     ps.setString(1, ref);
                     ps.setInt(2, idCommande);
@@ -187,7 +187,6 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                     ps.executeUpdate();
                 }
 
-                // Mise à jour du stock
                 try (PreparedStatement ps = conn.prepareStatement(updateStockSQL)) {
                     ps.setInt(1, quantite);
                     ps.setString(2, ref);
@@ -197,6 +196,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
 
             conn.commit();
 
+            // Génération du ticket de caisse
             try {
                 File dossierFactures = new File("factures");
                 if (!dossierFactures.exists()) dossierFactures.mkdirs();
@@ -205,22 +205,22 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
                 try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
                     writer.println("🧾 Ticket de caisse - BricoMerlin");
                     writer.println("Commande n° : " + idCommande);
-                    writer.println("Client : " + nomAcheteur);
                     writer.println("Date : " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
                     writer.println();
-                    writer.printf("%-15s %-10s %-15s %-10s%n", "Référence", "Quantité", "Prix Unitaire", "Total");
-                    writer.println("---------------------------------------------------------------");
+                    writer.printf("%-15s %-25s %-10s %-15s %-10s%n", "Référence", "Nom", "Quantité", "Prix Unitaire", "Total");
+                    writer.println("----------------------------------------------------------------------------------");
 
                     for (Map.Entry<String, Integer> entry : articles.entrySet()) {
                         String ref = entry.getKey();
                         int qte = entry.getValue();
                         double prix = prixArticles.get(ref);
+                        String nomArticle = nomsArticles.get(ref);
                         double total = prix * qte;
 
-                        writer.printf("%-15s %-10d %-15.2f %-10.2f%n", ref, qte, prix, total);
+                        writer.printf("%-15s %-25s %-10d %-15.2f %-10.2f%n", ref, nomArticle, qte, prix, total);
                     }
 
-                    writer.println("---------------------------------------------------------------");
+                    writer.println("----------------------------------------------------------------------------------");
                     writer.printf("Total à payer : %.2f €%n", totalPrix);
                 }
 
