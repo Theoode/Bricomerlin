@@ -52,4 +52,6 @@ public class SiegeImpl extends UnicastRemoteObject implements ServiceSiege {
         return log.toString();
     }
 
+
+
 }

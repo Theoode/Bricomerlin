@@ -2,6 +2,7 @@ package rmi;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+
 import java.util.List;
 import java.util.Map;
 
@@ -14,5 +15,6 @@ public interface ServicesServeur extends Remote {
     String getStatutPaiement(int idCommande) throws RemoteException;
     boolean reglerCommande(int idCommande) throws RemoteException;
     double calculerChiffreAffaires(String date) throws RemoteException;
+
 }
 

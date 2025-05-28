@@ -1,21 +1,23 @@
 package server_magasin;
+
+
 import rmi.ServicesServeur;
 import utils.DBManagerMagasin;
 
-
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 
 
@@ -192,36 +194,45 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
             }
 
             conn.commit();
-
-            // Génération du ticket de caisse
             try {
                 File dossierFactures = new File("factures");
                 if (!dossierFactures.exists()) dossierFactures.mkdirs();
 
-                String fileName = "factures/ticket_" + idCommande + ".txt";
+                String fileName = "factures/ticket_" + idCommande + ".json";
+
+                // Construire la structure de données à sérialiser en JSON
+                Map<String, Object> ticket = new LinkedHashMap<>();
+                ticket.put("titre", "🧾 Ticket de caisse - BricoMerlin");
+                ticket.put("commande_id", idCommande);
+                ticket.put("date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
+                List<Map<String, Object>> detailsArticles = new ArrayList<>();
+                for (Map.Entry<String, Integer> entry : articles.entrySet()) {
+                    String ref = entry.getKey();
+                    int qte = entry.getValue();
+                    double prix = prixArticles.get(ref);
+                    String nomArticle = nomsArticles.get(ref);
+                    double total = prix * qte;
+
+                    Map<String, Object> articleJson = new LinkedHashMap<>();
+                    articleJson.put("reference", ref);
+                    articleJson.put("nom", nomArticle);
+                    articleJson.put("quantite", qte);
+                    articleJson.put("prix_unitaire", prix);
+                    articleJson.put("total", total);
+
+                    detailsArticles.add(articleJson);
+                }
+                ticket.put("articles", detailsArticles);
+                ticket.put("total_a_payer", totalPrix);
+
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
                 try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
-                    writer.println("🧾 Ticket de caisse - BricoMerlin");
-                    writer.println("Commande n° : " + idCommande);
-                    writer.println("Date : " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                    writer.println();
-                    writer.printf("%-15s %-25s %-10s %-15s %-10s%n", "Référence", "Nom", "Quantité", "Prix Unitaire", "Total");
-                    writer.println("----------------------------------------------------------------------------------");
-
-                    for (Map.Entry<String, Integer> entry : articles.entrySet()) {
-                        String ref = entry.getKey();
-                        int qte = entry.getValue();
-                        double prix = prixArticles.get(ref);
-                        String nomArticle = nomsArticles.get(ref);
-                        double total = prix * qte;
-
-                        writer.printf("%-15s %-25s %-10d %-15.2f %-10.2f%n", ref, nomArticle, qte, prix, total);
-                    }
-
-                    writer.println("----------------------------------------------------------------------------------");
-                    writer.printf("Total à payer : %.2f €%n", totalPrix);
+                    writer.println(gson.toJson(ticket));
                 }
 
-                System.out.println("Ticket TXT généré dans factures/: ticket_" + idCommande + ".txt");
+                System.out.println("Ticket JSON généré dans factures/: ticket_" + idCommande + ".json");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -312,6 +323,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
         }
         return 0.0;
     }
+
 
 
 }
