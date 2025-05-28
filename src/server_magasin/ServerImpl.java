@@ -89,6 +89,28 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
     }
 
     @Override
+    public List<String> getFamillesDisponibles() throws RemoteException {
+        List<String> familles = new ArrayList<>();
+        String query = "SELECT nomFamille FROM Famille ORDER BY nomFamille";
+
+        try (Connection conn = DBManagerMagasin.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                familles.add(rs.getString("nomFamille"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Erreur lors de la récupération des familles", e);
+        }
+
+        return familles;
+    }
+
+
+    @Override
     public boolean ajouterStockProduit(String reference, int quantite) throws RemoteException {
         String queryCheck = "SELECT enStock FROM Article WHERE idReference = ?";
         String queryUpdate = "UPDATE Article SET enStock = enStock + ? WHERE idReference = ?";
@@ -226,6 +248,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
                 ticket.put("articles", detailsArticles);
                 ticket.put("total_a_payer", totalPrix);
 
+                // Sérialisation JSON avec Gson (bibliothèque Google)
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
                 try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
