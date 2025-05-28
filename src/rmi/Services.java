@@ -14,4 +14,6 @@ public interface Services extends Remote {
     List<String> getArticlesDisponibles() throws RemoteException;
     String getStatutPaiement(int idCommande) throws RemoteException;
     boolean reglerCommande(int idCommande) throws RemoteException;
+    double calculerChiffreAffaires(String date) throws RemoteException;
+
 }

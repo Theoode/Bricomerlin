@@ -121,7 +121,6 @@ public class ClientApp {
 
             // Onglet 2 : Créer une commande
             JPanel commandePanel = new JPanel(new BorderLayout());
-            JTextField nomAcheteurField = new JTextField(20);
             JTextField qteCommandeField = new JTextField(5);
             JComboBox<String> articleComboBox = new JComboBox<>();
             JComboBox<String> panierComboBox = new JComboBox<>();
@@ -303,11 +302,37 @@ public class ClientApp {
             });
 
 
+            // Onglet Analyse
+            JPanel analysePanel = new JPanel(new GridLayout(4, 1, 10, 10));
+            JTextField dateField = new JTextField("2025-05-28"); // Format attendu : yyyy-MM-dd
+            JButton btnCalculerCA = new JButton("Calculer Chiffre d'Affaires");
+            JLabel resultatLabel = new JLabel("💰 Chiffre d'affaires : 0.00 €");
+
+            analysePanel.add(new JLabel("📅 Date (yyyy-MM-dd) :"));
+            analysePanel.add(dateField);
+            analysePanel.add(btnCalculerCA);
+            analysePanel.add(resultatLabel);
+
+            btnCalculerCA.addActionListener(e -> {
+                try {
+                    String date = dateField.getText();
+                    double ca = service.calculerChiffreAffaires(date);
+                    resultatLabel.setText("💰 Chiffre d'affaires : " + String.format("%.2f", ca) + " €");
+                } catch (Exception ex) {
+                    resultatLabel.setText("❌ Erreur : " + ex.getMessage());
+                }
+            });
+
+
+
+
             // Onglets
             JTabbedPane tabbedPane = new JTabbedPane();
             tabbedPane.addTab("Articles", articlePanel);
             tabbedPane.addTab("Créer commande", commandePanel);
             tabbedPane.addTab("Facturation", facturationPanel);
+            tabbedPane.addTab("Analyse", analysePanel);
+
 
             frame.add(tabbedPane);
             frame.setVisible(true);

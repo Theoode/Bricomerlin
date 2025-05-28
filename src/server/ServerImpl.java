@@ -120,7 +120,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
 
     @Override
     public boolean creerCommande(Map<String, Integer> articles) throws RemoteException {
-        String insertCommandeSQL = "INSERT INTO commandes(total_prix, statut_paiement) VALUES ( ?, ?)";
+        String insertCommandeSQL = "INSERT INTO commandes(total_prix, statut_paiement,date_commande) VALUES ( ?, ?,CURRENT_TIMESTAMP)";
         String insertCommandeProduitSQL = "INSERT INTO article_commande(idReference, id_commande, quantite) VALUES (?, ?, ?)";
         String updateStockSQL = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
         String selectArticleSQL = "SELECT nom, prixUnitaire, enStock FROM article WHERE idReference = ?";
@@ -297,6 +297,24 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
             return false;
         }
     }
+
+    public double calculerChiffreAffaires(String date) throws RemoteException {
+        String sql = "SELECT SUM(total_prix) FROM commandes WHERE DATE(date_commande) = ?";
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, date); // format "2024-05-28"
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getDouble(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0.0;
+    }
+
 
 
 }
