@@ -21,9 +21,7 @@ import java.util.List;
 
 public class ServerImpl extends UnicastRemoteObject implements Services {
     private Map<String, Integer> stock;
-    private double chiffreAffaire;
 
-    // Constructeur
     protected ServerImpl() throws RemoteException {
         super();
         System.out.println("Constructeur ServerImpl lancé");
@@ -298,6 +296,7 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         }
     }
 
+    @Override
     public double calculerChiffreAffaires(String date) throws RemoteException {
         String sql = "SELECT SUM(total_prix) FROM commandes WHERE DATE(date_commande) = ?";
         try (Connection conn = DBManager.getConnection();
@@ -314,7 +313,6 @@ public class ServerImpl extends UnicastRemoteObject implements Services {
         }
         return 0.0;
     }
-
 
 
 }
