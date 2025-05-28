@@ -1,6 +1,6 @@
-package server;
+package server_magasin;
 import rmi.ServicesServeur;
-import utils.DBManager;
+import utils.DBManagerMagasin;
 
 
 import java.rmi.RemoteException;
@@ -39,7 +39,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
         WHERE a.idReference = ?
         """;
 
-        try (Connection conn = DBManager.getConnection();
+        try (Connection conn = DBManagerMagasin.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
 
             ps.setString(1, reference);
@@ -68,7 +68,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
         List<String> articles = new ArrayList<>();
         String query = "SELECT idReference,nom FROM Article A,Famille F WHERE A.idFamille = F.idFamille AND A.EnStock > 0 AND F.nomFamille = ?";
 
-        try (Connection conn = DBManager.getConnection();
+        try (Connection conn = DBManagerMagasin.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
 
             ps.setString(1, nomFamille);
@@ -91,7 +91,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
         String queryCheck = "SELECT enStock FROM Article WHERE idReference = ?";
         String queryUpdate = "UPDATE Article SET enStock = enStock + ? WHERE idReference = ?";
 
-        try (Connection conn = DBManager.getConnection()) {
+        try (Connection conn = DBManagerMagasin.getConnection()) {
             try (PreparedStatement psCheck = conn.prepareStatement(queryCheck)) {
                 psCheck.setString(1, reference);
                 ResultSet rs = psCheck.executeQuery();
@@ -122,7 +122,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
         String updateStockSQL = "UPDATE article SET enStock = enStock - ? WHERE idReference = ?";
         String selectArticleSQL = "SELECT nom, prixUnitaire, enStock FROM article WHERE idReference = ?";
 
-        try (Connection conn = DBManager.getConnection()) {
+        try (Connection conn = DBManagerMagasin.getConnection()) {
             conn.setAutoCommit(false);
 
             double totalPrix = 0.0;
@@ -239,7 +239,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
         List<String> articlesDisponibles = new ArrayList<>();
         String query = "SELECT idReference, nom FROM article WHERE enStock > 0";
 
-        try (Connection conn = DBManager.getConnection();
+        try (Connection conn = DBManagerMagasin.getConnection();
              PreparedStatement ps = conn.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
 
@@ -259,7 +259,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
 
     @Override
     public String getStatutPaiement(int idCommande) throws RemoteException {
-        try (Connection conn = DBManager.getConnection();
+        try (Connection conn = DBManagerMagasin.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT statut_paiement FROM commandes WHERE id_commande = ?")) {
             ps.setInt(1, idCommande);
             ResultSet rs = ps.executeQuery();
@@ -275,7 +275,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
 
     @Override
     public boolean reglerCommande(int idCommande) throws RemoteException {
-        try (Connection conn = DBManager.getConnection()) {
+        try (Connection conn = DBManagerMagasin.getConnection()) {
             PreparedStatement check = conn.prepareStatement("SELECT statut_paiement FROM commandes WHERE id_commande = ?");
             check.setInt(1, idCommande);
             ResultSet rs = check.executeQuery();
@@ -298,7 +298,7 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
     @Override
     public double calculerChiffreAffaires(String date) throws RemoteException {
         String sql = "SELECT SUM(total_prix) FROM commandes WHERE DATE(date_commande) = ?";
-        try (Connection conn = DBManager.getConnection();
+        try (Connection conn = DBManagerMagasin.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, date); // format "2024-05-28"
