@@ -1,5 +1,9 @@
 package client;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import rmi.ServicesServeur;
 
 import javax.swing.*;
@@ -274,7 +278,7 @@ public class ClientApp {
             JButton btnReglerCommande = new JButton("Régler la commande");
             JLabel statutPaiementLabel = new JLabel("Statut : inconnu");
 
-            // Zone d'entrée pour l’ID de commande
+
             JPanel topPanel = new JPanel();
             topPanel.add(new JLabel("ID Commande :"));
             topPanel.add(idCommandeField);
@@ -288,31 +292,58 @@ public class ClientApp {
             btnAfficherTicket.addActionListener(e -> {
                 try {
                     int idCommande = Integer.parseInt(idCommandeField.getText().trim());
-                    File ticket = new File("factures/ticket_" + idCommande + ".txt");
+                    File ticket = new File("factures/ticket_" + idCommande + ".json");
+
                     if (!ticket.exists()) {
                         ticketArea.setText("❌ Ticket non trouvé pour la commande #" + idCommande);
                         return;
                     }
 
-                    // Lire le contenu du fichier
+                    // Lire le contenu JSON du fichier
                     StringBuilder sb = new StringBuilder();
                     try (BufferedReader br = new BufferedReader(new FileReader(ticket))) {
                         String line;
                         while ((line = br.readLine()) != null) {
-                            sb.append(line).append("\n");
+                            sb.append(line);
                         }
                     }
 
-                    ticketArea.setText(sb.toString());
+                    Gson gson = new Gson();
+                    JsonObject json = gson.fromJson(sb.toString(), JsonObject.class);
 
-                    // Afficher statut paiement
-                    String statut = service.getStatutPaiement(idCommande); // Méthode à implémenter côté serveur
+                    StringBuilder affichage = new StringBuilder();
+                    affichage.append(json.get("titre").getAsString()).append("\n");
+                    affichage.append("Commande #").append(json.get("commande_id").getAsInt()).append("\n");
+                    affichage.append("Date : ").append(json.get("date").getAsString()).append("\n\n");
+
+                    affichage.append("Articles :\n");
+
+                    JsonArray articles = json.getAsJsonArray("articles");
+                    for (JsonElement element : articles) {
+                        JsonObject art = element.getAsJsonObject();
+                        affichage.append("• ").append(art.get("nom").getAsString())
+                                .append(" (").append(art.get("reference").getAsString()).append(")")
+                                .append(" x").append(art.get("quantite").getAsInt())
+                                .append(" @ ").append(String.format("%.2f", art.get("prix_unitaire").getAsDouble())).append(" €")
+                                .append(" → ").append(String.format("%.2f", art.get("total").getAsDouble())).append(" €\n");
+                    }
+
+                    affichage.append("\n💰 Total à payer : ")
+                            .append(String.format("%.2f", json.get("total_a_payer").getAsDouble()))
+                            .append(" €\n");
+
+                    ticketArea.setText(affichage.toString());
+
+                    // Statut paiement
+                    String statut = service.getStatutPaiement(idCommande);
                     statutPaiementLabel.setText("Statut : " + statut);
 
                 } catch (Exception ex) {
                     ticketArea.setText("Erreur : " + ex.getMessage());
+                    ex.printStackTrace();
                 }
             });
+
             btnReglerCommande.addActionListener(e -> {
                 try {
                     int idCommande = Integer.parseInt(idCommandeField.getText().trim());

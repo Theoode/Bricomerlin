@@ -109,7 +109,6 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
         return familles;
     }
 
-
     @Override
     public boolean ajouterStockProduit(String reference, int quantite) throws RemoteException {
         String queryCheck = "SELECT enStock FROM Article WHERE idReference = ?";
