@@ -12,8 +12,6 @@ import java.util.*;
 public class ServerImpl extends UnicastRemoteObject implements Services {
     private Map<String, Integer> stock;
     private double chiffreAffaire;
-
-    // Constructeur
     protected ServerImpl() throws RemoteException {
         super();
         stock = new HashMap<>();
