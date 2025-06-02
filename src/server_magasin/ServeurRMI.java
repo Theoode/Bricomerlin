@@ -1,6 +1,6 @@
-package server;
+package server_magasin;
 
-import rmi.Services;
+import rmi.ServicesServeur;
 
 import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
@@ -8,13 +8,10 @@ import java.rmi.registry.LocateRegistry;
 public class ServeurRMI {
     public static void main(String[] args) {
         try {
-
             LocateRegistry.createRegistry(1099);
-            System.out.println("Registre RMI démarré sur le port 1099...");
-
-            Services service = new ServerImpl();
+            ServicesServeur service = new ServerImpl();
             Naming.rebind("rmi://localhost/ServiceStock", service);
-            System.out.println("Serveur prêt");
+            System.out.println("Serveur Magasin prêt");
         } catch (Exception e) {
             e.printStackTrace();
         }
