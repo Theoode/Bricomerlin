@@ -124,6 +124,8 @@ public class ClientApp {
                     rechercheResultArea.append("Erreur famille : " + ex.getMessage() + "\n");
                 }
             });
+
+
             btnAjouterPanier.addActionListener(e -> {
                 try {
                     String ref = refAjoutField.getText().trim();
@@ -164,32 +166,41 @@ public class ClientApp {
                     rechercheResultArea.append("Erreur ajout panier : " + ex.getMessage() + "\n");
                 }
             });
+
             btnSupprimerPanier.addActionListener(e -> {
                 String selection = panierList.getSelectedValue();
                 if (selection == null) return;
 
-                String ref = selection.split(" x")[0];
-                Integer qte = panier.get(ref);
-                if (qte == null) return;
-
                 try {
+                    // Extraire la référence (avant le premier " - ")
+                    String ref = selection.split(" - ")[0].trim();
+
+                    if (!panier.containsKey(ref)) {
+                        rechercheResultArea.append("Référence introuvable dans le panier : " + ref + "\n");
+                        return;
+                    }
+
+                    int qte = panier.get(ref);
+
                     String res = service.consulterStock(ref);
                     String prixStr = res.split("Prix: ")[1].split("€")[0].trim();
                     double prix = Double.parseDouble(prixStr.replace(",", "."));
 
                     totalPanier[0] -= prix * qte;
-                    panier.remove(ref);
 
-                    panierModel.clear();
-                    for (Map.Entry<String, Integer> entry : panier.entrySet()) {
-                        panierModel.addElement(entry.getKey() + " x" + entry.getValue());
-                    }
+                    panier.remove(ref);
+                    refVersNom.remove(ref);
+
+                    panierModel.removeElement(selection);  // Supprimer uniquement la ligne sélectionnée
 
                     totalLabel.setText("Total : " + String.format("%.2f", totalPanier[0]) + " €");
                 } catch (Exception ex) {
                     rechercheResultArea.append("Erreur suppression panier : " + ex.getMessage() + "\n");
                 }
             });
+
+
+
             btnValiderCommande.addActionListener(e -> {
                 if (panier.isEmpty()) {
                     rechercheResultArea.append("Le panier est vide !\n");
