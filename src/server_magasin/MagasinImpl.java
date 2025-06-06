@@ -1,13 +1,17 @@
 package server_magasin;
 
 
-import rmi.ServicesServeur;
+import rmi.ServiceSiege;
+import rmi.ServiceMagasin;
 import utils.DBManagerMagasin;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.rmi.Naming;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,10 +25,10 @@ import com.google.gson.GsonBuilder;
 
 
 
-public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
+public class MagasinImpl extends UnicastRemoteObject implements ServiceMagasin {
     private Map<String, Integer> stock;
 
-    protected ServerImpl() throws RemoteException {
+    protected MagasinImpl() throws RemoteException {
         super();
         System.out.println("Constructeur ServerImpl lancé");
         stock = new HashMap<>();
@@ -344,6 +348,79 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
             e.printStackTrace();
         }
         return 0.0;
+    }
+
+
+    @Override
+    public void exporterFactures() {
+        File sourceDir = new File("factures");
+        File destinationDir = new File("factures_siege");
+
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) {
+            System.out.println("Le dossier 'factures' n'existe pas.");
+            return;
+        }
+
+        if (!destinationDir.exists()) {
+            if (destinationDir.mkdirs()) {
+                System.out.println("Le dossier 'factures_siege' a été créé.");
+            } else {
+                System.out.println("Échec de la création du dossier 'factures_siege'.");
+                return;
+            }
+        }
+
+        File[] fichiers = sourceDir.listFiles((dir, name) -> name.endsWith(".json"));
+        if (fichiers == null || fichiers.length == 0) {
+            System.out.println("Aucune facture à exporter.");
+            return;
+        }
+
+        for (File fichier : fichiers) {
+            File destFile = new File(destinationDir, fichier.getName());
+            try (Scanner scanner = new Scanner(fichier);
+                 PrintWriter writer = new PrintWriter(new FileWriter(destFile))) {
+                while (scanner.hasNextLine()) {
+                    writer.println(scanner.nextLine());
+                }
+                System.out.println("Facture exportée : " + fichier.getName());
+            } catch (Exception e) {
+                System.err.println("Erreur lors de l'export de la facture : " + fichier.getName());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void synchroniserPrixAvecSiege() throws RemoteException {
+        try {
+            // Connexion au RMI du siège
+            Registry registry = LocateRegistry.getRegistry("localhost", 2099); // port du siège
+            ServiceSiege siege = (ServiceSiege) Naming.lookup("rmi://localhost:2099/ServiceSiege");
+
+
+            Map<String, Double> prixDuSiege = siege.getPrixArticles();
+
+            try (Connection conn = DBManagerMagasin.getConnection()) {
+                PreparedStatement updateStmt = conn.prepareStatement(
+                        "UPDATE article SET prixUnitaire = ? WHERE idReference = ?"
+                );
+
+                for (Map.Entry<String, Double> entry : prixDuSiege.entrySet()) {
+                    updateStmt.setDouble(1, entry.getValue());
+                    updateStmt.setString(2, entry.getKey());
+                    updateStmt.executeUpdate();
+                }
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                throw new RemoteException("❌ Erreur SQL dans mise à jour magasin", e);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RemoteException("❌ Erreur lors de l’appel au siège", e);
+        }
     }
 
 

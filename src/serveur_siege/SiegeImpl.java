@@ -1,7 +1,6 @@
 package serveur_siege;
 
 import rmi.ServiceSiege;
-import utils.DBManagerMagasin;
 import utils.DBManagerSiege;
 
 import java.rmi.RemoteException;
@@ -10,48 +9,37 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SiegeImpl extends UnicastRemoteObject implements ServiceSiege {
+
     protected SiegeImpl() throws RemoteException {
         super();
         System.out.println("Constructeur SiegeImpl lancé");
-        }
+    }
 
     @Override
-    public String synchroniserTousLesPrix() throws RemoteException {
-        StringBuilder log = new StringBuilder();
-
-        try (
-                Connection siegeConn = DBManagerSiege.getConnection();
-                Connection magasinConn = DBManagerMagasin.getConnection();
-                PreparedStatement selectStmt = siegeConn.prepareStatement("SELECT idReference, prixUnitaire FROM article");
-                PreparedStatement updateStmt = magasinConn.prepareStatement("UPDATE article SET prixUnitaire = ? WHERE idReference = ?");
-        ) {
-            ResultSet rs = selectStmt.executeQuery();
+    public Map<String, Double> getPrixArticles() throws RemoteException {
+        Map<String, Double> prixMap = new HashMap<>();
+        try (Connection conn = DBManagerSiege.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT idReference, prixUnitaire FROM article");
+             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                String ref = rs.getString("idReference");
-                double nouveauPrix = rs.getDouble("prixUnitaire");
-
-                updateStmt.setDouble(1, nouveauPrix);
-                updateStmt.setString(2, ref);
-
-                int rows = updateStmt.executeUpdate();
-                if (rows > 0) {
-                    log.append("✅ ").append(ref).append(" mis à jour à ").append(nouveauPrix).append(" €\n");
-                } else {
-                    log.append("⚠️ ").append(ref).append(" introuvable dans la base magasin\n");
-                }
+                prixMap.put(rs.getString("idReference"), rs.getDouble("prixUnitaire"));
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return "❌ Erreur SQL : " + e.getMessage();
+            throw new RemoteException("Erreur SQL dans getPrixArticles", e);
         }
-
-        return log.toString();
+        return prixMap;
     }
 
-
+    @Override
+    public String synchroniserTousLesPrix() {
+        return "";
+    }
 
 }
