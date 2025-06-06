@@ -347,5 +347,50 @@ public class ServerImpl extends UnicastRemoteObject implements ServicesServeur {
     }
 
 
+    @Override
+    public void exporterFactures() {
+        File sourceDir = new File("factures");
+        File destinationDir = new File("factures_siege");
+
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) {
+            System.out.println("Le dossier 'factures' n'existe pas.");
+            return;
+        }
+
+        if (!destinationDir.exists()) {
+            if (destinationDir.mkdirs()) {
+                System.out.println("Le dossier 'factures_siege' a été créé.");
+            } else {
+                System.out.println("Échec de la création du dossier 'factures_siege'.");
+                return;
+            }
+        }
+
+        File[] fichiers = sourceDir.listFiles((dir, name) -> name.endsWith(".json"));
+        if (fichiers == null || fichiers.length == 0) {
+            System.out.println("Aucune facture à exporter.");
+            return;
+        }
+
+        for (File fichier : fichiers) {
+            File destFile = new File(destinationDir, fichier.getName());
+            try (Scanner scanner = new Scanner(fichier);
+                 PrintWriter writer = new PrintWriter(new FileWriter(destFile))) {
+                while (scanner.hasNextLine()) {
+                    writer.println(scanner.nextLine());
+                }
+                System.out.println("Facture exportée : " + fichier.getName());
+            } catch (Exception e) {
+                System.err.println("Erreur lors de l'export de la facture : " + fichier.getName());
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+
+
+
+
 
 }

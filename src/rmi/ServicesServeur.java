@@ -16,5 +16,7 @@ public interface ServicesServeur extends Remote {
     String getStatutPaiement(int idCommande) throws RemoteException;
     boolean reglerCommande(int idCommande) throws RemoteException;
     double calculerChiffreAffaires(String date) throws RemoteException;
+    void exporterFactures() throws RemoteException;
+
 }
 

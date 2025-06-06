@@ -287,6 +287,8 @@ public class ClientApp {
             ticketArea.setEditable(false);
             JButton btnAfficherTicket = new JButton("Afficher Ticket");
             JButton btnReglerCommande = new JButton("Régler la commande");
+            JButton btnExporterFactures = new JButton("Exporter les factures");
+
             JLabel statutPaiementLabel = new JLabel("Statut : inconnu");
 
 
@@ -296,6 +298,8 @@ public class ClientApp {
             topPanel.add(btnAfficherTicket);
             topPanel.add(btnReglerCommande);
             topPanel.add(statutPaiementLabel);
+            topPanel.add(btnExporterFactures);
+
 
             facturationPanel.add(topPanel, BorderLayout.NORTH);
             facturationPanel.add(new JScrollPane(ticketArea), BorderLayout.CENTER);
@@ -368,6 +372,16 @@ public class ClientApp {
                     }
                 } catch (Exception ex) {
                     ticketArea.setText("Erreur : " + ex.getMessage());
+                }
+            });
+
+            btnExporterFactures.addActionListener(e -> {
+                try {
+                    service.exporterFactures(); // Appel de la méthode distante
+                    JOptionPane.showMessageDialog(null, "📁 Les factures ont été exportées vers 'factures_siege'.");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "❌ Erreur lors de l'exportation : " + ex.getMessage());
+                    ex.printStackTrace();
                 }
             });
 
