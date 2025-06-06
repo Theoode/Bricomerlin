@@ -6,7 +6,7 @@ import java.rmi.RemoteException;
 import java.util.List;
 import java.util.Map;
 
-public interface ServicesServeur extends Remote {
+public interface ServiceMagasin extends Remote {
     String consulterStock(String reference) throws RemoteException;
     List<String> rechercherArticlesParFamille(String famille) throws RemoteException;
     List<String> getFamillesDisponibles() throws RemoteException;
@@ -17,6 +17,7 @@ public interface ServicesServeur extends Remote {
     boolean reglerCommande(int idCommande) throws RemoteException;
     double calculerChiffreAffaires(String date) throws RemoteException;
     void exporterFactures() throws RemoteException;
+    void synchroniserPrixAvecSiege() throws RemoteException;
 
 }
 

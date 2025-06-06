@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import rmi.ServicesServeur;
+import rmi.ServiceMagasin;
 
 import javax.swing.*;
 import java.awt.*;
@@ -28,7 +28,7 @@ public class ClientApp {
         frame.setSize(750, 550);
 
         try {
-            ServicesServeur service = (ServicesServeur) Naming.lookup("rmi://localhost/ServiceStock");
+            ServiceMagasin service = (ServiceMagasin) Naming.lookup("rmi://localhost/ServiceStock");
 
             JPanel articlePanel = new JPanel(new BorderLayout());
 
@@ -75,6 +75,8 @@ public class ClientApp {
             JButton btnAjouterPanier = new JButton("Ajouter au panier");
             JButton btnSupprimerPanier = new JButton("Supprimer du panier");
             JButton btnValiderCommande = new JButton("Valider la commande");
+            JButton btnSynchroniserPrix = new JButton("Synchroniser les prix");
+
 
             ajoutPanel.add(new JLabel("Réf :"));
             ajoutPanel.add(refAjoutField);
@@ -83,6 +85,8 @@ public class ClientApp {
             ajoutPanel.add(btnAjouterPanier);
             ajoutPanel.add(btnSupprimerPanier);
             ajoutPanel.add(btnValiderCommande);
+            ajoutPanel.add(btnSynchroniserPrix);
+
             panierPanel.add(new JScrollPane(panierList), BorderLayout.CENTER);
             panierPanel.add(totalLabel, BorderLayout.SOUTH);
             panierPanel.add(ajoutPanel, BorderLayout.NORTH);
@@ -95,6 +99,17 @@ public class ClientApp {
             Map<String, String> refVersNom = new HashMap<>();
 
             final double[] totalPanier = {0.0};
+
+            btnSynchroniserPrix.addActionListener(e -> {
+                try {
+                    service.synchroniserPrixAvecSiege();
+                    JOptionPane.showMessageDialog(null, "✅ Prix synchronisés avec le siège !");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "❌ Erreur lors de la synchronisation : " + ex.getMessage());
+                }
+            });
+
 
 
             btnConsulter.addActionListener(e -> {
@@ -124,8 +139,6 @@ public class ClientApp {
                     rechercheResultArea.append("Erreur famille : " + ex.getMessage() + "\n");
                 }
             });
-
-
             btnAjouterPanier.addActionListener(e -> {
                 try {
                     String ref = refAjoutField.getText().trim();
